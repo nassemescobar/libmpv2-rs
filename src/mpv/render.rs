@@ -72,6 +72,11 @@ pub struct RenderFrameInfo {
     pub target_time: i64,
 }
 
+pub use libmpv2_sys::mpv_render_update_flag as MpvRenderUpdate;
+pub mod mpv_render_update {
+    pub use libmpv2_sys::mpv_render_update_flag_MPV_RENDER_UPDATE_FRAME as Frame;
+}
+
 pub enum RenderParamApiType {
     OpenGl,
 }
@@ -380,6 +385,37 @@ impl RenderContext {
                 Some(ru_wrapper::<F>),
                 raw_callback as *mut c_void,
             );
+        }
+    }
+
+    /// The API user is supposed to call this when the update callback was invoked
+    /// (like all mpv_render_* functions, this has to happen on the render thread,
+    /// and _not_ from the update callback itself).
+    ///
+    /// This is optional if MPV_RENDER_PARAM_ADVANCED_CONTROL was not set (default).
+    /// Otherwise, it's a hard requirement that this is called after each update
+    /// callback. If multiple update callback happened, and the function could not
+    /// be called sooner, it's OK to call it once after the last callback.
+    ///
+    /// If an update callback happens during or after this function, the function
+    /// must be called again at the soonest possible time.
+    ///
+    /// If MPV_RENDER_PARAM_ADVANCED_CONTROL was set, this will do additional work
+    /// such as allocating textures for the video decoder.
+    ///
+    /// # Returns
+    ///
+    /// A bitset of mpv_render_update_flag values (i.e. multiple flags are
+    /// combined with bitwise or). Typically, this will tell the API user
+    /// what should happen next. E.g. if the MPV_RENDER_UPDATE_FRAME flag is
+    /// set, mpv_render_context_render() should be called. If flags unknown
+    /// to the API user are set, or if the return value is 0, nothing needs
+    /// to be done.
+    pub fn update(&self) -> Result<MpvRenderUpdate> {
+        let res = unsafe { libmpv2_sys::mpv_render_context_update(self.ctx) };
+        match res.try_into() {
+            Ok(res) => Ok(res),
+            Err(_) => Err(Error::Raw(libmpv2_sys::mpv_error_MPV_ERROR_GENERIC)),
         }
     }
 }
