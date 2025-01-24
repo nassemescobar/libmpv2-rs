@@ -562,6 +562,38 @@ impl Mpv {
         })
     }
 
+    /// Version of `command` that uses `mpv_command` instead of `mpv_command_string`
+    /// internally, so escaping arguments is unnecessary.
+    /// 
+    /// A prefered method for 'loadfile' command according to [manual](https://mpv.io/manual/master/#paths).
+    /// 
+    /// For any other case use `command` method instaed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use libmpv2::{Mpv};
+    /// # use libmpv2::mpv_node::MpvNode;
+    /// # use std::collections::HashMap;
+    /// mpv.command_ns("loadfile", &["test-data/jellyfish.mp4", "append-play"]).unwrap();
+    /// # let node = mpv.get_property::<MpvNode>("playlist").unwrap();
+    /// # let mut list = node.array().unwrap().collect::<Vec<_>>();
+    /// # let map = list.pop().unwrap().map().unwrap().collect::<HashMap<_, _>>();
+    /// # assert_eq!(map, HashMap::from([(String::from("id"), MpvNode::Int64(1)), (String::from("current"), MpvNode::Flag(true)), (String::from("filename"), MpvNode::String(String::from("test-data/jellyfish.mp4")))]));
+    /// ```
+    pub fn command_ns(&self, name: &str, args: &[&str]) -> Result<()> {
+        let cmd = Vec::with_capacity(arg.len() + 1);
+        cmp.push(CString::new(name)?);
+        for arg in args {
+            cmd.push(CString::new(arg)?);
+        }
+        let mut raw: Vec<*const i8> = cmd.iter().map(|cmd| cmd.as_ptr()).collect();
+        raw.push(std::ptr::null());
+        mpv_err((), unsafe {
+            libmpv2_sys::mpv_command(self.ctx.as_ptr(), raw.as_mut_ptr())
+        })
+    }
+
     /// Set the value of a property.
     pub fn set_property<T: SetData>(&self, name: &str, data: T) -> Result<()> {
         let name = CString::new(name)?;
