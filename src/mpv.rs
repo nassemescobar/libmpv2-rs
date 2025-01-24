@@ -582,7 +582,7 @@ impl Mpv {
     /// # assert_eq!(map, HashMap::from([(String::from("id"), MpvNode::Int64(1)), (String::from("current"), MpvNode::Flag(true)), (String::from("filename"), MpvNode::String(String::from("test-data/jellyfish.mp4")))]));
     /// ```
     pub fn command_ns(&self, name: &str, args: &[&str]) -> Result<()> {
-        let cmd = Vec::with_capacity(args.len() + 1);
+        let mut cmd = Vec::with_capacity(args.len() + 1);
         cmd.push(CString::new(name)?);
         for arg in args {
             cmd.push(CString::new(*arg)?);
